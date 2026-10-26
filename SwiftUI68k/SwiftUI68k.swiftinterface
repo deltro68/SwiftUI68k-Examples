@@ -1,0 +1,195 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Swift version 6.4-dev (swift68k m68k-apple-macos6)
+// swift-module-name: SwiftUI68k
+//
+// Public API surface of `SwiftUI68k` for Macintosh Plus (System 6.0.8, 8 MHz 68000).
+// Flat-node, zero-heap-allocation declarative UI engine with in-place QuickDraw diffing.
+
+import MacToolbox
+
+// MARK: - Core View & Scene Protocols
+
+public protocol View {
+    associatedtype Body: View
+    @ViewBuilder var body: Self.Body { get }
+}
+
+public protocol Scene {}
+
+public protocol App {
+    associatedtype Body: Scene
+    init()
+    static func preLaunch()
+    @SceneBuilder var body: Self.Body { get }
+    static func quit()
+}
+
+// MARK: - Result Builders (`@ViewBuilder` & `@SceneBuilder`)
+
+@resultBuilder
+public struct ViewBuilder {
+    public static func buildBlock() -> EmptyView
+    public static func buildBlock<C: View>(_ content: C) -> C
+    public static func buildIf<C: View>(_ content: C?) -> OptionalView<C>
+    public static func buildEither<T: View, F: View>(first: T) -> ConditionalView<T, F>
+    public static func buildEither<T: View, F: View>(second: F) -> ConditionalView<T, F>
+}
+
+// MARK: - State, Bindings & Batched Updates
+
+@propertyWrapper
+public struct State<Value> {
+    public init(wrappedValue: Value)
+    public var wrappedValue: Value { get nonmutating set }
+    public var projectedValue: Binding<Value> { get }
+}
+
+public struct Binding<Value> {
+    public init(_ pointer: UnsafeMutablePointer<Value>)
+    public init(ptr: UnsafeMutablePointer<Int32>) where Value == Bool
+    public var value: Value { get nonmutating set }
+}
+
+public struct Str255Binding {
+    public init(_ pointer: UnsafeMutablePointer<Str255>)
+    public func clear()
+}
+
+/// Coalesces multiple `Binding` writes into a single layout & QuickDraw diff pass.
+public func withUpdatesBatched(_ body: () -> Void)
+
+// MARK: - Layout Containers (`VStack`, `HStack`, `Card`, `TabView`, `Group`)
+
+public enum StackSizing { case fit, equal }
+public enum HorizontalAlignment { case leading, center, trailing }
+public enum CardTone { case light, dark }
+public enum BalloonTail { case top(Int16), bottom(Int16), left(Int16), right(Int16) }
+
+public struct VStack<Content: View>: View {
+    public init(spacing: Int16 = 6, alignment: HorizontalAlignment = .center, @ViewBuilder content: () -> Content)
+}
+
+public struct HStack<Content: View>: View {
+    public init(_ sizing: StackSizing = .equal, spacing: Int16 = 6, @ViewBuilder content: () -> Content)
+}
+
+public struct Card<Content: View>: View {
+    public init(_ tone: CardTone = .light, padding: Int16 = 8, spacing: Int16 = 4, @ViewBuilder content: () -> Content)
+}
+
+public struct TabView<Content: View>: View {
+    public init(selection: Binding<Int32>, @ViewBuilder content: () -> Content)
+}
+
+public struct Tab<Content: View>: View {
+    public init(_ title: StaticString, @ViewBuilder content: () -> Content)
+}
+
+public struct Balloon<Content: View>: View {
+    public init(tail: BalloonTail = .bottom(16), padding: Int16 = 6, @ViewBuilder content: () -> Content)
+}
+
+public struct Spacer: View { public init(minLength: Int16 = 0) }
+public struct Divider: View { public init() }
+
+// MARK: - Controls & Crafted 1-Bit Widgets
+
+public enum Glyph {
+    case play, pause, stop, previous, next
+    case shuffle, loop, speaker, speakerOff
+    case refresh, search, plus, minus, check, warning, star
+}
+
+public enum ToggleStyle { case checkbox, latched }
+
+public struct Button: View {
+    public init(_ label: StaticString, width: Int16 = 0, tag: Int32 = 0)
+    public func defaultButton() -> Button
+    public func cancelButton() -> Button
+    public func disabled(_ isDisabled: Bool) -> Button
+}
+
+public struct BevelButton: View {
+    public init(_ label: StaticString = "", glyph: Glyph? = nil, latched: Bool = false,
+                led: Bool = false, width: Int16 = 0, height: Int16 = 22, tag: Int32 = 0)
+    public func disabled(_ isDisabled: Bool) -> BevelButton
+}
+
+public struct Pill: View {
+    public init(_ label: StaticString, selected: Bool, tag: Int32 = 0)
+    public func disabled(_ isDisabled: Bool) -> Pill
+}
+
+public struct Toggle: View {
+    public init(_ label: StaticString, isOn: Binding<Bool>, style: ToggleStyle = .checkbox,
+                glyph: Glyph? = nil, width: Int16 = 0)
+}
+
+public struct SegmentedPicker<Content: View>: View {
+    public init(selection: Binding<Int32>, @ViewBuilder content: () -> Content)
+}
+
+public struct Slider: View {
+    public init(value: Binding<Int32>, in range: ClosedRange<Int32>,
+                live: Bool = false, width: Int16 = 120, onCommit: ((Int32) -> Void)? = nil)
+}
+
+public struct Stepper: View {
+    public init(value: Binding<Int32>, in range: ClosedRange<Int32>, step: Int32 = 1)
+}
+
+public struct LevelMeter: View {
+    public init(value: Int32, segments: Int16 = 12)
+}
+
+public struct ProgressBar: View {
+    public init(value: Int32, total: Int32 = 100, showPercent: Bool = true,
+                height: Int16 = 12, onClickFraction: ((Int32) -> Void)? = nil)
+}
+
+public struct Badge: View {
+    public init(_ text: StaticString)
+    public init(glyph: Glyph)
+}
+
+public struct List: View {
+    public init(rowCount: Int32, selection: Binding<Int32>, rows: Int16 = 8,
+                onActivate: ((Int32) -> Void)? = nil,
+                row: @escaping @convention(c) (Int32, Rect) -> Void)
+}
+
+public typealias CanvasDrawC = @convention(c) (Rect, Int32) -> Void
+
+public struct Canvas: View {
+    public init(_ width: Int32, _ height: Int32, key: UInt32 = 0, draw: CanvasDrawC)
+}
+
+// MARK: - Typography, Scenes & Timers
+
+public struct Text: View {
+    public init(_ content: StaticString)
+    public func font(_ font: Font) -> Text
+    public func aligned(_ alignment: HorizontalAlignment) -> Text
+}
+
+public struct NumberText: View {
+    public init(_ value: Int32, prefix: StaticString = "", suffix: StaticString = "")
+    public func font(_ font: Font) -> NumberText
+    public func aligned(_ alignment: HorizontalAlignment) -> NumberText
+}
+
+public struct Window<Content: View>: Scene {
+    public init(_ title: StaticString, size: WindowSize = .large,
+                nodes: Int = 128, arena: Int = 768,
+                onAction: ((Int32) -> Void)? = nil,
+                @ViewBuilder content: @escaping () -> Content)
+}
+
+public struct Menu: Scene {
+    public init(_ title: StaticString, id: Int16, @MenuBuilder content: () -> Void)
+}
+
+public struct Timer {
+    @discardableResult
+    public init(every ticks: Int32, _ callback: @escaping () -> Void)
+}
